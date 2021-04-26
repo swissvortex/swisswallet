@@ -11,8 +11,8 @@ import (
 
 type SimpleUtils interface {
 	GetArguments() (*model.Arguments, string, []string)
-	PrintHelpMode()
-	PrintHelpParams(mode string)
+	PrintHelpModeAndExit()
+	PrintHelpParamsAndExit(mode string)
 	ExitWithError(err error)
 	CheckMode(mode string) error
 	IsEmptyString(str string) bool
@@ -34,7 +34,19 @@ var fs = flag.NewFlagSet("options", flag.ContinueOnError)
 func (s *simpleUtils) GetArguments() (*model.Arguments, string, []string) {
 	s.logger.LogOnEntryWithContext(s.logger.GetContext(), nil)
 	arguments := new(model.Arguments)
+
+	if s.IsEmptyArray(os.Args[1:]) {
+		err := errors.New("Missing operation mode")
+		s.logger.LogOnBadRequestErrorWithContext(s.logger.GetContext(), err)
+		s.PrintHelpModeAndExit()
+	}
+
 	mode := os.Args[1]
+	err := s.CheckMode(mode)
+	if err != nil {
+		s.logger.LogOnBadRequestErrorWithContext(s.logger.GetContext(), err)
+		s.ExitWithError(err)
+	}
 
 	fs.StringVar(&arguments.Password, "p", "", "Vortex-wallet password")
 	fs.StringVar(&arguments.Salt, "s", "", "Vortex-wallet salt")
@@ -51,14 +63,14 @@ func (s *simpleUtils) GetArguments() (*model.Arguments, string, []string) {
 	return arguments, mode, fs.Args()
 }
 
-func (s *simpleUtils) PrintHelpMode() {
+func (s *simpleUtils) PrintHelpModeAndExit() {
 	fmt.Println()
 	fmt.Printf("Usage: %s %s [options...]\n", os.Args[0], supportedModes)
 	PrintModes()
 	os.Exit(1)
 }
 
-func (s *simpleUtils) PrintHelpParams(mode string) {
+func (s *simpleUtils) PrintHelpParamsAndExit(mode string) {
 	fmt.Println()
 	fmt.Printf("Usage: %s %s [options...]\n", os.Args[0], mode)
 	PrintModes()
