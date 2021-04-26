@@ -1,84 +1,129 @@
 package repo
 
 import (
-	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/rand"
-	"encoding/hex"
+	"errors"
 	"fmt"
-	"io"
+	"vortex-wallet/logger"
+
+	. "vortex-wallet/constants"
 
 	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/scrypt"
 )
 
 type CryptoRepository interface {
-	DecryptCBC(key, ciphertext []byte) ([]byte, error)
-	EncryptCBC(key, plaintext []byte) ([]byte, error)
-	Argon2Kdf(secret string, salt string) []byte
-	ScryptKdf(secret string, salt string) ([]byte, error)
+	AesDecrypt(ciphertext []byte, key []byte, iv []byte) ([]byte, error)
+	AesEncrypt(plaintext []byte, key []byte, iv []byte) ([]byte, error)
+	Argon2Kdf(password string, salt string, difficulty string) []byte
+	ScryptKdf(password string, salt string, difficulty string) ([]byte, error)
+	GetArgon2ParamsByDifficulty(difficulty string) (uint32, uint32, uint8, uint32)
+	GetScryptParamsByDifficulty(difficulty string) (int, int, int, int)
 }
 
-type cryptoRepository struct{}
-
-func NewCryptoRepository() CryptoRepository {
-	return &cryptoRepository{}
+type cryptoRepository struct {
+	logger *logger.Logger
 }
 
-func (c *cryptoRepository) DecryptCBC(key []byte, ciphertext []byte) ([]byte, error) {
-	var block cipher.Block
-	var err error
+func NewCryptoRepository(logger *logger.Logger) CryptoRepository {
+	return &cryptoRepository{
+		logger: logger,
+	}
+}
 
-	if block, err = aes.NewCipher(key); err != nil {
+func (c *cryptoRepository) AesDecrypt(ciphertext []byte, key []byte, iv []byte) ([]byte, error) {
+	c.logger.LogOnEntryWithContext(c.logger.GetContext(), fmt.Sprintf("%x, %x, %x", ciphertext, key, iv))
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		c.logger.LogOnInternalErrorWithContext(c.logger.GetContext(), err)
 		return nil, err
 	}
 
 	if len(ciphertext) < aes.BlockSize {
-		fmt.Printf("ciphertext too short")
+		err = errors.New(AES_BLOCKSIZE_ERROR)
+		c.logger.LogOnInternalErrorWithContext(c.logger.GetContext(), err)
 		return nil, err
 	}
 
-	//TODO: Set proper IV
-	iv := bytes.Repeat([]byte("0"), 16)
-
+	plaintext := make([]byte, len(ciphertext))
 	cbc := cipher.NewCBCDecrypter(block, iv)
-	cbc.CryptBlocks(ciphertext, ciphertext)
+	cbc.CryptBlocks(plaintext, ciphertext)
 
-	plaintext := ciphertext
-
-	return plaintext, nil
+	c.logger.LogOnExitWithContext(c.logger.GetContext(), fmt.Sprintf("%x", plaintext), err)
+	return plaintext, err
 }
 
-func (c *cryptoRepository) EncryptCBC(key []byte, plaintext []byte) ([]byte, error) {
+func (c *cryptoRepository) AesEncrypt(plaintext []byte, key []byte, iv []byte) ([]byte, error) {
+	c.logger.LogOnEntryWithContext(c.logger.GetContext(), fmt.Sprintf("%x, %x, %x", plaintext, key, iv))
+
 	if len(plaintext)%aes.BlockSize != 0 {
-		panic("plaintext is not a multiple of the block size")
+		err := errors.New(AES_PLAINTEXT_NOT_MULTIPLE_ERROR)
+		c.logger.LogOnInternalErrorWithContext(c.logger.GetContext(), err)
+		return nil, err
 	}
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		panic(err)
+		c.logger.LogOnInternalErrorWithContext(c.logger.GetContext(), err)
+		return nil, err
 	}
 
-	ciphertext := make([]byte, aes.BlockSize+len(plaintext))
-	iv := ciphertext[:aes.BlockSize]
-	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		panic(err)
-	}
-
-	fmt.Printf("CBC Key: %s\n", hex.EncodeToString(key))
-	fmt.Printf("CBC IV: %s\n", hex.EncodeToString(iv))
-
+	ciphertext := make([]byte, len(plaintext))
 	cbc := cipher.NewCBCEncrypter(block, iv)
-	cbc.CryptBlocks(ciphertext[aes.BlockSize:], plaintext)
+	cbc.CryptBlocks(ciphertext, plaintext)
 
+	c.logger.LogOnExitWithContext(c.logger.GetContext(), fmt.Sprintf("%x", ciphertext), err)
 	return ciphertext, err
 }
 
-func (c *cryptoRepository) Argon2Kdf(secret string, salt string) []byte {
-	return argon2.Key([]byte(secret), []byte(salt), 8, 256*1024, 4, 32)
+func (c *cryptoRepository) Argon2Kdf(password string, salt string, difficulty string) []byte {
+	c.logger.LogOnEntryWithContext(c.logger.GetContext(), password, salt, difficulty)
+
+	time, memory, threads, keyLen := c.GetArgon2ParamsByDifficulty(difficulty)
+	argon2Key := argon2.Key([]byte(password), []byte(salt), time, memory, threads, keyLen)
+
+	c.logger.LogOnExitWithContext(c.logger.GetContext(), fmt.Sprintf("%x", argon2Key))
+	return argon2Key
 }
 
-func (c *cryptoRepository) ScryptKdf(secret string, salt string) ([]byte, error) {
-	return scrypt.Key([]byte(secret), []byte(salt), 262144, 8, 1, 32)
+func (c *cryptoRepository) ScryptKdf(password string, salt string, difficulty string) ([]byte, error) {
+	c.logger.LogOnEntryWithContext(c.logger.GetContext(), password, salt, difficulty)
+
+	N, r, p, keyLen := c.GetScryptParamsByDifficulty(difficulty)
+	scryptKey, err := scrypt.Key([]byte(password), []byte(salt), N, r, p, keyLen)
+	if err != nil {
+		c.logger.LogOnInternalErrorWithContext(c.logger.GetContext(), err)
+		return nil, err
+	}
+
+	c.logger.LogOnExitWithContext(c.logger.GetContext(), fmt.Sprintf("%x", scryptKey), err)
+	return scryptKey, err
+}
+
+func (c *cryptoRepository) GetArgon2ParamsByDifficulty(difficulty string) (uint32, uint32, uint8, uint32) {
+	switch difficulty {
+	case "strong":
+		return 8, 256 * 1024, 4, 32
+	case "super_strong":
+		return 8, 256 * 1024, 4, 32
+	case "ridiculously_strong":
+		return 8, 256 * 1024, 4, 32
+	default:
+		return 8, 256 * 1024, 4, 32
+	}
+}
+
+func (c *cryptoRepository) GetScryptParamsByDifficulty(difficulty string) (int, int, int, int) {
+	switch difficulty {
+	case "strong":
+		return 262144, 8, 1, 32
+	case "super_strong":
+		return 262144, 8, 1, 32
+	case "ridiculously_strong":
+		return 262144, 8, 1, 32
+	default:
+		return 262144, 8, 1, 32
+	}
 }
