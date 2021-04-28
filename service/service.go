@@ -12,6 +12,7 @@ import (
 
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/tyler-smith/go-bip39"
+	wordlist "github.com/tyler-smith/go-bip39/wordlists"
 	"github.com/vsergeev/btckeygenie/btckey"
 )
 
@@ -20,6 +21,7 @@ type Service interface {
 	DecryptWallet(arguments model.Arguments) error
 	EncryptWallet(arguments model.Arguments) error
 	GenerateAESParams(arguments model.Arguments) (*model.AESParams, error)
+	ChangeMnemonicLanguageIfSupported(language string) error
 }
 
 type service struct {
@@ -40,6 +42,12 @@ func (s *service) GenerateWallet(arguments model.Arguments) error {
 	s.logger.LogOnEntryWithContext(s.logger.GetContext(), arguments)
 
 	err := s.simpleUtils.CheckIfSupported(arguments.Output, s.simpleUtils.GetSupportedOutputs())
+	if err != nil {
+		s.logger.LogOnBadRequestErrorWithContext(s.logger.GetContext(), err)
+		return err
+	}
+
+	err = s.ChangeMnemonicLanguageIfSupported(arguments.Language)
 	if err != nil {
 		s.logger.LogOnBadRequestErrorWithContext(s.logger.GetContext(), err)
 		return err
@@ -83,6 +91,12 @@ func (s *service) DecryptWallet(arguments model.Arguments) error {
 	s.logger.LogOnEntryWithContext(s.logger.GetContext(), arguments)
 
 	err := s.simpleUtils.CheckIfSupported(arguments.Output, s.simpleUtils.GetSupportedOutputs())
+	if err != nil {
+		s.logger.LogOnBadRequestErrorWithContext(s.logger.GetContext(), err)
+		return err
+	}
+
+	err = s.ChangeMnemonicLanguageIfSupported(arguments.Language)
 	if err != nil {
 		s.logger.LogOnBadRequestErrorWithContext(s.logger.GetContext(), err)
 		return err
@@ -154,6 +168,12 @@ func (s *service) EncryptWallet(arguments model.Arguments) error {
 		return err
 	}
 
+	err = s.ChangeMnemonicLanguageIfSupported(arguments.Language)
+	if err != nil {
+		s.logger.LogOnBadRequestErrorWithContext(s.logger.GetContext(), err)
+		return err
+	}
+
 	if arguments.MnemonicIsEmpty() && arguments.KeyIsEmpty() {
 		err := errors.New("Private Key or Mnemonic are required in encryption mode")
 		s.logger.LogOnBadRequestErrorWithContext(s.logger.GetContext(), err)
@@ -208,13 +228,52 @@ func (s *service) GenerateAESParams(arguments model.Arguments) (*model.AESParams
 	params := new(model.AESParams)
 	var err error
 
-	params.EncryptionKey = s.cryptoRepository.Argon2Kdf(arguments.GetCurrencyPasswordByKdf(ARGON2), arguments.GetCurrencySaltByKdf(ARGON2), arguments.GetDifficulty())
+	params.EncryptionKey, err = s.cryptoRepository.Argon2Kdf(arguments.GetCurrencyPasswordByKdf(ARGON2), arguments.GetCurrencySaltByKdf(ARGON2), arguments.GetDifficulty())
+	if err != nil {
+		s.logger.LogOnErrorWithContext(s.logger.GetContext(), err)
+		return nil, err
+	}
+
 	params.Input, err = s.cryptoRepository.ScryptKdf(arguments.GetCurrencyPasswordByKdf(SCRYPT), arguments.GetCurrencySaltByKdf(SCRYPT), arguments.GetDifficulty())
 	if err != nil {
-		s.logger.LogOnInternalErrorWithContext(s.logger.GetContext(), err)
+		s.logger.LogOnErrorWithContext(s.logger.GetContext(), err)
 		return nil, err
 	}
 
 	s.logger.LogOnExitWithContext(s.logger.GetContext(), fmt.Sprintf("%x", params), err)
 	return params, err
+}
+
+func (s *service) ChangeMnemonicLanguageIfSupported(language string) error {
+	s.logger.LogOnEntryWithContext(s.logger.GetContext(), language)
+
+	err := s.simpleUtils.CheckIfSupported(language, s.simpleUtils.GetSupportedLanguages())
+	if err != nil {
+		s.logger.LogOnBadRequestErrorWithContext(s.logger.GetContext(), err)
+		return err
+	}
+
+	if language != ENGLISH_LANGUAGE {
+		switch language {
+		case SPANISH_LANGUAGE:
+			bip39.SetWordList(wordlist.Spanish)
+		case CHINESE_TRADITIONAL_LANGUAGE:
+			bip39.SetWordList(wordlist.ChineseTraditional)
+		case CHINESE_SIMPLIFIED_LANGUAGE:
+			bip39.SetWordList(wordlist.ChineseSimplified)
+		case CZECH_LANGUAGE:
+			bip39.SetWordList(wordlist.Czech)
+		case FRENCH_LANGUAGE:
+			bip39.SetWordList(wordlist.French)
+		case ITALIAN_LANGUAGE:
+			bip39.SetWordList(wordlist.Italian)
+		case JAPANESE_LANGUAGE:
+			bip39.SetWordList(wordlist.Japanese)
+		case KOREAN_LANGUAGE:
+			bip39.SetWordList(wordlist.Korean)
+		}
+	}
+
+	s.logger.LogOnExitWithContext(s.logger.GetContext(), err)
+	return err
 }

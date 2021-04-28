@@ -16,10 +16,10 @@ import (
 type CryptoRepository interface {
 	AesDecrypt(ciphertext []byte, key []byte, iv []byte) ([]byte, error)
 	AesEncrypt(plaintext []byte, key []byte, iv []byte) ([]byte, error)
-	Argon2Kdf(password string, salt string, difficulty string) []byte
+	Argon2Kdf(password string, salt string, difficulty string) ([]byte, error)
 	ScryptKdf(password string, salt string, difficulty string) ([]byte, error)
-	GetArgon2ParamsByDifficulty(difficulty string) (uint32, uint32, uint8, uint32)
-	GetScryptParamsByDifficulty(difficulty string) (int, int, int, int)
+	GetArgon2ParamsByDifficulty(difficulty string) (uint32, uint32, uint8, uint32, error)
+	GetScryptParamsByDifficulty(difficulty string) (int, int, int, int, error)
 }
 
 type cryptoRepository struct {
@@ -78,20 +78,30 @@ func (c *cryptoRepository) AesEncrypt(plaintext []byte, key []byte, iv []byte) (
 	return ciphertext, err
 }
 
-func (c *cryptoRepository) Argon2Kdf(password string, salt string, difficulty string) []byte {
+func (c *cryptoRepository) Argon2Kdf(password string, salt string, difficulty string) ([]byte, error) {
 	c.logger.LogOnEntryWithContext(c.logger.GetContext(), password, salt, difficulty)
 
-	time, memory, threads, keyLen := c.GetArgon2ParamsByDifficulty(difficulty)
+	time, memory, threads, keyLen, err := c.GetArgon2ParamsByDifficulty(difficulty)
+	if err != nil {
+		c.logger.LogOnBadRequestErrorWithContext(c.logger.GetContext(), err)
+		return nil, err
+	}
+
 	argon2Key := argon2.IDKey([]byte(password), []byte(salt), time, memory, threads, keyLen)
 
 	c.logger.LogOnExitWithContext(c.logger.GetContext(), fmt.Sprintf("%x", argon2Key))
-	return argon2Key
+	return argon2Key, err
 }
 
 func (c *cryptoRepository) ScryptKdf(password string, salt string, difficulty string) ([]byte, error) {
 	c.logger.LogOnEntryWithContext(c.logger.GetContext(), password, salt, difficulty)
 
-	N, r, p, keyLen := c.GetScryptParamsByDifficulty(difficulty)
+	N, r, p, keyLen, err := c.GetScryptParamsByDifficulty(difficulty)
+	if err != nil {
+		c.logger.LogOnBadRequestErrorWithContext(c.logger.GetContext(), err)
+		return nil, err
+	}
+
 	scryptKey, err := scrypt.Key([]byte(password), []byte(salt), N, r, p, keyLen)
 	if err != nil {
 		c.logger.LogOnInternalErrorWithContext(c.logger.GetContext(), err)
@@ -102,40 +112,44 @@ func (c *cryptoRepository) ScryptKdf(password string, salt string, difficulty st
 	return scryptKey, err
 }
 
-func (c *cryptoRepository) GetArgon2ParamsByDifficulty(difficulty string) (uint32, uint32, uint8, uint32) {
+func (c *cryptoRepository) GetArgon2ParamsByDifficulty(difficulty string) (uint32, uint32, uint8, uint32, error) {
 	switch difficulty {
-	case "ridiculously_strong":
-		return 128, 8192 * 1024, 4, 32
-	case "super_strong":
-		return 64, 4096 * 1024, 4, 32
-	case "strong":
-		return 32, 2048 * 1024, 4, 32
-	case "normal":
-		return 16, 1024 * 1024, 4, 32
-	case "low":
-		return 8, 512 * 1024, 4, 32
-	case "minimum":
-		return 4, 256 * 1024, 4, 32
+	case RIDICULOUSLY_STRONG_DIFFICULTY:
+		return 128, 8192 * 1024, 4, 32, nil
+	case SUPER_STRONG_DIFFICULTY:
+		return 64, 4096 * 1024, 4, 32, nil
+	case STRONG_DIFFICULTY:
+		return 32, 2048 * 1024, 4, 32, nil
+	case NORMAL_DIFFICULTY:
+		return 16, 1024 * 1024, 4, 32, nil
+	case LOW_DIFFICULTY:
+		return 8, 512 * 1024, 4, 32, nil
+	case MINIMUM_DIFFICULTY:
+		return 4, 256 * 1024, 4, 32, nil
 	default:
-		return 32, 2048 * 1024, 4, 32
+		err := errors.New(fmt.Sprintf(BAD_REQUEST_DIFFICULTY_ERROR))
+		c.logger.LogOnBadRequestErrorWithContext(c.logger.GetContext(), err)
+		return 32, 2048 * 1024, 4, 32, err
 	}
 }
 
-func (c *cryptoRepository) GetScryptParamsByDifficulty(difficulty string) (int, int, int, int) {
+func (c *cryptoRepository) GetScryptParamsByDifficulty(difficulty string) (int, int, int, int, error) {
 	switch difficulty {
-	case "ridiculously_strong":
-		return 8192 * 1024, 8, 1, 32
-	case "super_strong":
-		return 4096 * 1024, 8, 1, 32
-	case "strong":
-		return 2048 * 1024, 8, 1, 32
-	case "normal":
-		return 1024 * 1024, 8, 1, 32
-	case "low":
-		return 512 * 1024, 8, 1, 32
-	case "minimum":
-		return 256 * 1024, 8, 1, 32
+	case RIDICULOUSLY_STRONG_DIFFICULTY:
+		return 8192 * 1024, 8, 1, 32, nil
+	case SUPER_STRONG_DIFFICULTY:
+		return 4096 * 1024, 8, 1, 32, nil
+	case STRONG_DIFFICULTY:
+		return 2048 * 1024, 8, 1, 32, nil
+	case NORMAL_DIFFICULTY:
+		return 1024 * 1024, 8, 1, 32, nil
+	case LOW_DIFFICULTY:
+		return 512 * 1024, 8, 1, 32, nil
+	case MINIMUM_DIFFICULTY:
+		return 256 * 1024, 8, 1, 32, nil
 	default:
-		return 2048 * 1024, 8, 1, 32
+		err := errors.New(fmt.Sprintf(BAD_REQUEST_DIFFICULTY_ERROR))
+		c.logger.LogOnBadRequestErrorWithContext(c.logger.GetContext(), err)
+		return 2048 * 1024, 8, 1, 32, err
 	}
 }

@@ -17,6 +17,8 @@ type SimpleUtils interface {
 	ExitWithError(err error)
 	GetSupportedModes() []string
 	GetSupportedOutputs() []string
+	GetSupportedLanguages() []string
+	GetSupportedDifficulties() []string
 	CheckIfSupported(str string, supportedStrArray []string) error
 	IsEmptyString(str string) bool
 	IsEmptyArray(array []string) bool
@@ -35,6 +37,8 @@ func NewSimpleUtils(logger *logger.Logger) SimpleUtils {
 
 var supportedModes = []string{GENERATE_MODE, DECRYPT_MODE, ENCRYPT_MODE}
 var supportedOutputs = []string{RAW_OUTPUT, MNEMONIC_OUTPUT}
+var supportedLanguages = []string{ENGLISH_LANGUAGE, SPANISH_LANGUAGE, CHINESE_TRADITIONAL_LANGUAGE, CHINESE_SIMPLIFIED_LANGUAGE, CZECH_LANGUAGE, FRENCH_LANGUAGE, ITALIAN_LANGUAGE, JAPANESE_LANGUAGE, KOREAN_LANGUAGE}
+var supportedDifficulties = []string{MINIMUM_DIFFICULTY, LOW_DIFFICULTY, NORMAL_DIFFICULTY, STRONG_DIFFICULTY, SUPER_STRONG_DIFFICULTY, RIDICULOUSLY_STRONG_DIFFICULTY}
 
 var fs = flag.NewFlagSet("options", flag.ContinueOnError)
 
@@ -57,13 +61,13 @@ func (s *simpleUtils) GetArguments() (*model.Arguments, string, []string) {
 
 	fs.StringVar(&arguments.Password, "p", "", "Vortex-wallet password")
 	fs.StringVar(&arguments.Salt, "s", "", "Vortex-wallet salt")
-	fs.StringVar(&arguments.Currency, "c", "ethereum", "Currency to use. Currently supported are [testnet|bitcoin|ethereum|litecoin|monero|cosmos|polkadot")
-	fs.StringVar(&arguments.Difficulty, "d", "strong", "Difficulty of the hashing algorithms. Currently supported are [minimum|low|normal|strong|super_strong|ridiculously_strong]")
 	fs.StringVar(&arguments.Mnemonic, "m", "", "24 words mnemonic")
 	fs.StringVar(&arguments.Key, "k", "", "Private key")
-	fs.StringVar(&arguments.Language, "l", "english", "Mnemonic language [english|spanish|chinese_trad|chinese_simp|czech|french|italian|japanese|korean]")
 	fs.StringVar(&arguments.Address, "a", "", "Currency address")
-	fs.StringVar(&arguments.Output, "o", "mnemonic", "Output wallet format [mnemonic|raw]")
+	fs.StringVar(&arguments.Currency, "c", "ethereum", "Currency to use. Currently supported are [testnet|bitcoin|ethereum|litecoin|monero|cosmos|polkadot")
+	fs.StringVar(&arguments.Difficulty, "d", STRONG_DIFFICULTY, fmt.Sprintf("Difficulty of the hashing algorithms. Currently supported are %s", supportedDifficulties))
+	fs.StringVar(&arguments.Language, "l", ENGLISH_LANGUAGE, fmt.Sprintf("Mnemonic language %s", supportedLanguages))
+	fs.StringVar(&arguments.Output, "o", MNEMONIC_OUTPUT, fmt.Sprintf("Output wallet format %s", supportedOutputs))
 	fs.Parse(os.Args[2:])
 
 	s.logger.LogOnExitWithContext(s.logger.GetContext(), arguments, mode, fs.Args())
@@ -107,6 +111,14 @@ func (s *simpleUtils) GetSupportedModes() []string {
 
 func (s *simpleUtils) GetSupportedOutputs() []string {
 	return supportedOutputs
+}
+
+func (s *simpleUtils) GetSupportedLanguages() []string {
+	return supportedLanguages
+}
+
+func (s *simpleUtils) GetSupportedDifficulties() []string {
+	return supportedDifficulties
 }
 
 func (s *simpleUtils) CheckIfSupported(str string, supportedStrArray []string) error {
