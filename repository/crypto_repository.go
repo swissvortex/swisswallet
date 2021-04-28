@@ -82,7 +82,7 @@ func (c *cryptoRepository) Argon2Kdf(password string, salt string, difficulty st
 	c.logger.LogOnEntryWithContext(c.logger.GetContext(), password, salt, difficulty)
 
 	time, memory, threads, keyLen := c.GetArgon2ParamsByDifficulty(difficulty)
-	argon2Key := argon2.Key([]byte(password), []byte(salt), time, memory, threads, keyLen)
+	argon2Key := argon2.IDKey([]byte(password), []byte(salt), time, memory, threads, keyLen)
 
 	c.logger.LogOnExitWithContext(c.logger.GetContext(), fmt.Sprintf("%x", argon2Key))
 	return argon2Key
@@ -104,26 +104,38 @@ func (c *cryptoRepository) ScryptKdf(password string, salt string, difficulty st
 
 func (c *cryptoRepository) GetArgon2ParamsByDifficulty(difficulty string) (uint32, uint32, uint8, uint32) {
 	switch difficulty {
-	case "strong":
-		return 8, 256 * 1024, 4, 32
-	case "super_strong":
-		return 8, 256 * 1024, 4, 32
 	case "ridiculously_strong":
-		return 8, 256 * 1024, 4, 32
+		return 128, 8192 * 1024, 4, 32
+	case "super_strong":
+		return 64, 4096 * 1024, 4, 32
+	case "strong":
+		return 32, 2048 * 1024, 4, 32
+	case "normal":
+		return 16, 1024 * 1024, 4, 32
+	case "low":
+		return 8, 512 * 1024, 4, 32
+	case "minimum":
+		return 4, 256 * 1024, 4, 32
 	default:
-		return 8, 256 * 1024, 4, 32
+		return 32, 2048 * 1024, 4, 32
 	}
 }
 
 func (c *cryptoRepository) GetScryptParamsByDifficulty(difficulty string) (int, int, int, int) {
 	switch difficulty {
-	case "strong":
-		return 262144, 8, 1, 32
-	case "super_strong":
-		return 262144, 8, 1, 32
 	case "ridiculously_strong":
-		return 262144, 8, 1, 32
+		return 8192 * 1024, 8, 1, 32
+	case "super_strong":
+		return 4096 * 1024, 8, 1, 32
+	case "strong":
+		return 2048 * 1024, 8, 1, 32
+	case "normal":
+		return 1024 * 1024, 8, 1, 32
+	case "low":
+		return 512 * 1024, 8, 1, 32
+	case "minimum":
+		return 256 * 1024, 8, 1, 32
 	default:
-		return 262144, 8, 1, 32
+		return 2048 * 1024, 8, 1, 32
 	}
 }

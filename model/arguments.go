@@ -75,3 +75,27 @@ func (a *Arguments) SaltIsEmpry() bool {
 		return false
 	}
 }
+
+func (a *Arguments) MnemonicIsEmpty() bool {
+	if a.Mnemonic == "" {
+		return true
+	} else {
+		return false
+	}
+}
+
+func (a *Arguments) KeyIsEmpty() bool {
+	if a.Key == "" {
+		return true
+	} else {
+		return false
+	}
+}
+
+func (a *Arguments) AddressIsEmpty() bool {
+	if a.Address == "" {
+		return true
+	} else {
+		return false
+	}
+}
