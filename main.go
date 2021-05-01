@@ -2,14 +2,14 @@ package main
 
 import (
 	"fmt"
+	. "swisswallet/constants"
+	"swisswallet/logger"
+	repo "swisswallet/repository"
+	"swisswallet/utils"
 	"time"
-	. "vortex-wallet/constants"
-	"vortex-wallet/logger"
-	repo "vortex-wallet/repository"
-	"vortex-wallet/utils"
 
-	"vortex-wallet/controller"
-	"vortex-wallet/service"
+	"swisswallet/controller"
+	"swisswallet/service"
 )
 
 func main() {
@@ -21,7 +21,7 @@ func main() {
 	cryptoRepository := repo.NewCryptoRepository(logger)
 	service := service.NewService(cryptoRepository, utils, logger)
 	controller := controller.NewController(service, utils, logger)
-	controller.RunVortexWallet()
+	controller.RunSwissWallet()
 
 	fmt.Printf("Elapsed time: %s\n", time.Now().Sub(start))
 }

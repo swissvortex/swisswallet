@@ -2,11 +2,11 @@ package controller
 
 import (
 	"errors"
-	. "vortex-wallet/constants"
-	"vortex-wallet/logger"
-	"vortex-wallet/model"
-	"vortex-wallet/service"
-	"vortex-wallet/utils"
+	. "swisswallet/constants"
+	"swisswallet/logger"
+	"swisswallet/model"
+	"swisswallet/service"
+	"swisswallet/utils"
 )
 
 type Controller struct {
@@ -23,7 +23,7 @@ func NewController(service service.Service, simpleUtils utils.SimpleUtils, logge
 	}
 }
 
-func (c *Controller) RunVortexWallet() {
+func (c *Controller) RunSwissWallet() {
 	arguments, mode, nonFlagArguments := c.simpleUtils.GetArguments()
 	c.logger.LogOnEntryWithContext(c.logger.GetContext(), arguments, nonFlagArguments)
 
