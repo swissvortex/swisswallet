@@ -1,7 +1,7 @@
 package model
 
 import (
-	. "vortex-wallet/constants"
+	. "swisswallet/constants"
 )
 
 type Arguments struct {

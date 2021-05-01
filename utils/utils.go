@@ -5,9 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	. "vortex-wallet/constants"
-	"vortex-wallet/logger"
-	"vortex-wallet/model"
+	. "swisswallet/constants"
+	"swisswallet/logger"
+	"swisswallet/model"
 )
 
 type SimpleUtils interface {
@@ -59,8 +59,8 @@ func (s *simpleUtils) GetArguments() (*model.Arguments, string, []string) {
 		s.ExitWithError(err)
 	}
 
-	fs.StringVar(&arguments.Password, "p", "", "Vortex-wallet password")
-	fs.StringVar(&arguments.Salt, "s", "", "Vortex-wallet salt")
+	fs.StringVar(&arguments.Password, "p", "", "swisswallet password")
+	fs.StringVar(&arguments.Salt, "s", "", "swisswallet salt")
 	fs.StringVar(&arguments.Mnemonic, "m", "", "24 words mnemonic")
 	fs.StringVar(&arguments.Key, "k", "", "Private key")
 	fs.StringVar(&arguments.Address, "a", "", "Currency address")
@@ -96,12 +96,12 @@ func (s *simpleUtils) ExitWithError(err error) {
 
 func PrintModes() {
 	fmt.Println("Supported modes with required arguments:")
-	fmt.Println("- \"generate mnemonic\": vortex-wallet generate -p password -s salt")
-	fmt.Println("- \"generate raw key\": vortex-wallet generate -o raw -p password -s salt")
-	fmt.Println("- \"encrypt mnemonic\": vortex-wallet encrypt -m mnemonic -p password")
-	fmt.Println("- \"encrypt raw key\": vortex-wallet encrypt -o raw -k privatekey -p password")
-	fmt.Println("- \"decrypt mnemonic\": vortex-wallet decrypt -m mnemonic -p password -a address")
-	fmt.Println("- \"decrypt raw key\": vortex-wallet decrypt -o raw -k privatekey -p password -a address")
+	fmt.Println("- \"generate mnemonic\": swisswallet generate -p password -s salt")
+	fmt.Println("- \"generate raw key\": swisswallet generate -o raw -p password -s salt")
+	fmt.Println("- \"encrypt mnemonic\": swisswallet encrypt -m mnemonic -p password")
+	fmt.Println("- \"encrypt raw key\": swisswallet encrypt -o raw -k privatekey -p password")
+	fmt.Println("- \"decrypt mnemonic\": swisswallet decrypt -m mnemonic -p password -a address")
+	fmt.Println("- \"decrypt raw key\": swisswallet decrypt -o raw -k privatekey -p password -a address")
 	fmt.Println()
 }
 

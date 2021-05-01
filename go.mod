@@ -1,4 +1,4 @@
-module vortex-wallet
+module swisswallet
 
 go 1.15
 

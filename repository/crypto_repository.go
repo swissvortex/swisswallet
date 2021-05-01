@@ -5,9 +5,9 @@ import (
 	"crypto/cipher"
 	"errors"
 	"fmt"
-	"vortex-wallet/logger"
+	"swisswallet/logger"
 
-	. "vortex-wallet/constants"
+	. "swisswallet/constants"
 
 	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/scrypt"
