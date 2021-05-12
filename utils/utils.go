@@ -65,7 +65,7 @@ func (s *simpleUtils) GetArguments() (*model.Arguments, string, []string) {
 	fs.StringVar(&arguments.Key, "k", "", "Private key")
 	fs.StringVar(&arguments.Address, "a", "", "Currency address")
 	fs.StringVar(&arguments.Currency, "c", "ethereum", "Currency to use. Currently supported are [testnet|bitcoin|ethereum|litecoin|monero|cosmos|polkadot")
-	fs.StringVar(&arguments.Difficulty, "d", STRONG_DIFFICULTY, fmt.Sprintf("Difficulty of the hashing algorithms. Currently supported are %s", supportedDifficulties))
+	fs.StringVar(&arguments.Difficulty, "d", SUPER_STRONG_DIFFICULTY, fmt.Sprintf("Difficulty of the hashing algorithms. Currently supported are %s", supportedDifficulties))
 	fs.StringVar(&arguments.Language, "l", ENGLISH_LANGUAGE, fmt.Sprintf("Mnemonic language %s", supportedLanguages))
 	fs.StringVar(&arguments.Output, "o", MNEMONIC_OUTPUT, fmt.Sprintf("Output wallet format %s", supportedOutputs))
 	fs.Parse(os.Args[2:])
