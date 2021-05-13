@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 	. "swisswallet/constants"
 	"swisswallet/logger"
 	"swisswallet/model"
@@ -129,7 +130,7 @@ func (s *service) DecryptWallet(arguments model.Arguments) error {
 		arguments.Key = hex.EncodeToString(entropy)
 	}
 
-	arguments.Salt = arguments.Address
+	arguments.Salt = strings.ToLower(arguments.Address)
 	params, err := s.GenerateAESParams(arguments)
 	if err != nil {
 		s.logger.LogOnInternalErrorWithContext(s.logger.GetContext(), err)
@@ -170,14 +171,14 @@ func (s *service) DecryptWallet(arguments model.Arguments) error {
 			s.logger.LogOnInternalErrorWithContext(s.logger.GetContext(), err)
 			return err
 		}
-		if arguments.Address == account.Address.Hex() {
+		if strings.ToLower(arguments.Address) == strings.ToLower(account.Address.Hex()) {
 			fmt.Println("Private Key successfully decrypted")
 			fmt.Printf("Decrypted Mnemonic: %s\n", mnemonic)
 		} else {
 			fmt.Println("Private Key does not match the provided address, or wrong output mode")
 		}
 	} else if arguments.Output == RAW_OUTPUT {
-		if arguments.Address == "0x"+hex.EncodeToString(address) {
+		if strings.ToLower(arguments.Address) == strings.ToLower("0x"+hex.EncodeToString(address)) {
 			fmt.Println("Private Key successfully decrypted")
 			fmt.Printf("Decrypted Private Key: %x\n", decryptedKeyAsBytes)
 		} else {
@@ -230,13 +231,13 @@ func (s *service) EncryptWallet(arguments model.Arguments) error {
 			return err
 		}
 		entropyAsBytes, err = hex.DecodeString(arguments.Key)
-		arguments.Salt = account.Address.Hex()
+		arguments.Salt = strings.ToLower(account.Address.Hex())
 	} else {
 		entropyAsBytes, err = hex.DecodeString(arguments.Key)
 		privateKey.FromBytes(entropyAsBytes)
 		publicKey := privateKey.ToBytesUncompressed()
 		address = ethcrypto.Keccak256(publicKey[1:])[12:]
-		arguments.Salt = "0x" + hex.EncodeToString(address)
+		arguments.Salt = strings.ToLower("0x" + hex.EncodeToString(address))
 	}
 
 	params, err := s.GenerateAESParams(arguments)
@@ -253,6 +254,7 @@ func (s *service) EncryptWallet(arguments model.Arguments) error {
 
 	if arguments.Output == RAW_OUTPUT {
 		fmt.Printf("Encrypted Private Key: %x\n", encryptedKeyAsBytes)
+		fmt.Printf("Ethereum Address: %s\n", "0x"+hex.EncodeToString(address))
 	} else {
 		mnemonic, err := bip39.NewMnemonic(encryptedKeyAsBytes)
 		if err != nil {
@@ -260,8 +262,8 @@ func (s *service) EncryptWallet(arguments model.Arguments) error {
 			return err
 		}
 		fmt.Printf("Encrypted Mnemonic: %s\n", mnemonic)
+		fmt.Printf("Ethereum Address: %s\n", account.Address.Hex())
 	}
-	fmt.Printf("Ethereum Address: %s\n", arguments.Salt)
 
 	s.logger.LogOnExitWithContext(s.logger.GetContext(), err)
 	return err
